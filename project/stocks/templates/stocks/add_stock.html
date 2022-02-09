@@ -1,0 +1,49 @@
+{% extends "base.html" %} 
+
+{% block styling %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/form_style.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="form-wrap">
+    <h1>Add a Stock</h1>
+    <form method="post">
+        <div class="field">
+            <label for="stockSymbol">Stock Symbol: <em>(required)</em></label>
+            <input
+                type="text"
+                id="stockSymbol"
+                name="stock_symbol"
+                placeholder="TSLA"
+                required
+                pattern="[A-Z]{1,5}"
+            />
+        </div>
+        <br />
+        <div class="field">
+            <label for="numberOfShares">Number of Shares:</label>
+            <input
+                type="number"
+                id="numberOfShares"
+                name="number_of_shares"
+                required
+            />
+        </div>
+
+        <div class="field">
+            <label for="purchasePrice">Purchase Price ($):</label>
+            <input
+                type="number"
+                id="purchasePrice"
+                name="purchase_price"
+                placeholder="$300.00"
+                required
+            />
+        </div>
+
+        <div class="field">
+            <button type="submit">Add Stock</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

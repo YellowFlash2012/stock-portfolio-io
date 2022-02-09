@@ -1,8 +1,14 @@
 
 {% extends "base.html" %}
 
+{% block styling %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stocks_style.css') }}">
+{% endblock %}
+
 {% block content %}
-<div>
+<div class="stocks-container">
+
+    <div class="stocks-list">
     <h1>List of Stocks</h1>
 
     <table>
@@ -17,10 +23,13 @@
 
     <!-- Table Element (Row) -->
     <tbody>
+        <tr>
         <td>{{ session['stock_symbol'] }}</td>
         <td>{{ session['number_of_shares'] }}</td>
         <td>${{ session['purchase_price'] }}</td>
+        </tr>
     </tbody>
   </table>
+  </div>
 </div>
 {% endblock %}
