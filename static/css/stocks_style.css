@@ -1,0 +1,39 @@
+/* Stock List Styling
+ ********************/
+.stocks-container {
+    display: flex;
+    justify-content: center;
+}
+
+table {
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+td,
+th {
+    border: 1px solid #ddd;
+    padding: 1.25rem 0.8rem;
+    overflow: hidden;
+}
+
+th {
+    padding-bottom: 0.8rem;
+    border-top: 2px solid #ddd;
+    border-bottom: 4px solid #ddd;
+    text-align: left;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+tfoot td {
+    background-color: #ddd;
+}
+
+table a {
+    text-decoration: underline;
+    font-weight: 700;
+}
