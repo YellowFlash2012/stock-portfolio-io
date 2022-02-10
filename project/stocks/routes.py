@@ -1,4 +1,5 @@
 from . import stocks_blueprint
+import click
 
 from flask import current_app, render_template, request, session, flash, redirect, url_for
 
@@ -50,3 +51,26 @@ def add_stock():
 def stocks():
     stocks = Stock.query.order_by(Stock.id).all()
     return render_template('stocks/stock.html', stocks = stocks)
+
+# custom CLI definitions
+@stocks_blueprint.cli.command('create_default_set')
+def create_default_set():
+    """Create three new stocks and add them to the database"""
+    stock1 = Stock('BLK', '100000', '247.29')
+    stock2 = Stock('AVGO', '100000', '31.89')
+    stock3 = Stock('ISRG', '100000', '118.77')
+    db.session.add(stock1)
+    db.session.add(stock2)
+    db.session.add(stock3)
+    db.session.commit()
+
+
+@stocks_blueprint.cli.command('create')
+@click.argument('symbol')
+@click.argument('number_of_shares')
+@click.argument('purchase_price')
+def create(symbol, number_of_shares, purchase_price):
+    """Create a new stock and add it to the database"""
+    stock = Stock(symbol, number_of_shares, purchase_price)
+    db.session.add(stock)
+    db.session.commit()
