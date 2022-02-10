@@ -1,11 +1,17 @@
-from flask import Flask
+from flask import Flask, render_template
 
 from logging.handlers import RotatingFileHandler
 
 import logging
 from flask.logging import default_handler
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate, migrate
 
 import os
+
+# db config
+db = SQLAlchemy()
+migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
@@ -14,8 +20,12 @@ def create_app():
     config_type = os.getenv('CONFIG_TYPE', default='config.DevelopmentConfig')
     app.config.from_object(config_type)
 
+    
+    init_ext(app)
     register_blueprints(app)
     configure_logging(app)
+    register_app_callbacks(app)
+    register_error_pages(app)
     return app
 
 def register_blueprints(app):
@@ -41,3 +51,35 @@ def configure_logging(app):
 
     # Log that the Flask application is starting
     app.logger.info('Starting the Flask Stock Portfolio App...')
+
+def register_app_callbacks(app):
+    @app.before_request
+    def app_before_request():
+        app.logger.info('Calling before_request() for the Flask application...')
+
+    @app.after_request
+    def app_after_request(response):
+        app.logger.info('Calling after_request() for the Flask application...')
+        return response
+
+    @app.teardown_request
+    def app_teardown_request(error=None):
+        app.logger.info('Calling teardown_request() for the Flask application...')
+
+    @app.teardown_appcontext
+    def app_teardown_appcontext(error=None):
+        app.logger.info('Calling teardown_appcontext() for the Flask application...')
+
+def register_error_pages(app):
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('404.html'), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return render_template('405.html'), 405
+
+def init_ext(app):
+    db.init_app(app)
+    migrate.init_app(app, db)
+
