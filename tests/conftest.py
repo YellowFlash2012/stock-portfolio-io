@@ -1,7 +1,7 @@
 import pytest
 from project import create_app
 from flask import current_app
-from project.models import Stock
+from project.models import Stock, User
 
 @pytest.fixture(scope='module')
 def test_client():
@@ -23,3 +23,8 @@ def test_client():
 def new_stock():
     stock = Stock('AAPL', '16', '406.78')
     return stock
+
+@pytest.fixture(scope='module')
+def new_user():
+    user = User('geisa@email.com', 'FlaskIsAwesome123')
+    return user

@@ -1,4 +1,5 @@
 from project import db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class Stock(db.Model):
     """
@@ -29,3 +30,38 @@ class Stock(db.Model):
 
     def __repr__(self):
         return f'{self.stock_symbol} - {self.number_of_shares} shares purchased at ${self.purchase_price}'
+
+
+class User(db.Model):
+    """
+    Class that represents a user of the application
+
+    The following attributes of a user are stored in this table:
+        * name - full name of the user
+        * email - email address of the user
+        * hashed password - hashed password (using werkzeug.security)
+
+    """
+
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    email = db.Column(db.String, unique=True)
+    password_hashed = db.Column(db.String(128))
+    # set to 128 bcz password_hash is 102 characters long
+
+    def __init__(self, name: str, email: str, password_plaintext: str):
+        self.name = name
+        self.email = email
+        self.password_hashed = self._generate_password_hash(password_plaintext)
+
+    def is_password_correct(self, password_plaintext: str):
+        return check_password_hash(self.password_hashed, password_plaintext)
+
+    @staticmethod
+    def _generate_password_hash(password_plaintext):
+        return generate_password_hash(password_plaintext)
+
+    def __repr__(self):
+        return f'<User: {self.name} {self.email}>'
