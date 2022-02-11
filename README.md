@@ -8,3 +8,4 @@ Flask app for tracking stock portfolio
 4- learned about logging and how to configure log messages
 5- The analogy between git commands and migration commands helped me understand what's going behind the hood and solidified my understand of the inner working of flask migrate.
 6- Learned about flask custom CLI and how to populate db right from the command line. That's a great and handy feature!
+7- Learned how to set cookie duration for auth purposes. The default duration offered by Flask_Login is 1 full year.

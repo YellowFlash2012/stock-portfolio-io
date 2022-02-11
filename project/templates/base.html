@@ -18,9 +18,11 @@
 <body>
     <header class="site-header">
         <nav class="nav">
-            <a href="{{ url_for('stocks.home') }}" class="nav-link logo">Flask Stock Portfolio App</a>
+            <a href="{{ url_for('stocks.home') }}" class="nav-link logo">Kozuki-IO</a>
 
             <ul class="nav-list">
+
+              {% if current_user.is_authenticated %}
                 <li class="nav-item">
                     <a href="{{ url_for('stocks.stocks') }}" class="nav-link">Stocks</a>
                 </li>
@@ -28,6 +30,26 @@
                 <li class="nav-item">
                     <a href="{{ url_for('stocks.add_stock') }}" class="nav-link">Add Stock</a>
                 </li>
+
+                <li class="nav-item">
+                    <a href="{{ url_for('users.user_profile') }}" class="nav-link">Profile</a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="{{ url_for('users.logout') }}" class="nav-link">Logout</a>
+                </li>
+
+                {% else %}
+
+                <li class="nav-item">
+                    <a href="{{ url_for('users.register') }}" class="nav-link">Sign up</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a href="{{ url_for('users.login') }}" class="nav-link">Login</a>
+                </li>
+
+                {% endif %}
                 
             </ul>
         </nav>

@@ -1,5 +1,6 @@
+from xmlrpc.client import Boolean
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length, Email
 
 class RegistrationForm(FlaskForm):
@@ -10,3 +11,12 @@ class RegistrationForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired(), Length(min=13, max=21)])
     
     submit = SubmitField('Register')
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(min=6, max=100)])
+
+    password = PasswordField('Password', validators=[DataRequired()])
+
+    remember_me = BooleanField('Remember me')
+
+    submit = SubmitField('Login')

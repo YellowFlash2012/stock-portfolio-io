@@ -1,17 +1,27 @@
+import os
+import logging
+
 from flask import Flask, render_template
 
 from logging.handlers import RotatingFileHandler
 
-import logging
+
 from flask.logging import default_handler
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, migrate
+from flask_wtf.csrf import CSRFProtect
+from flask_login import LoginManager
 
-import os
+
 
 # db config
 db = SQLAlchemy()
 migrate = Migrate()
+csrf_protection = CSRFProtect()
+
+# auth config
+login = LoginManager()
+login.login_view = "users.login"
 
 def create_app():
     app = Flask(__name__)
@@ -82,4 +92,13 @@ def register_error_pages(app):
 def init_ext(app):
     db.init_app(app)
     migrate.init_app(app, db)
+    csrf_protection.init_app(app)
+    login.init_app(app)
+
+    # Flask-Login configuration
+    from project.models import User
+
+    @login.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
 
