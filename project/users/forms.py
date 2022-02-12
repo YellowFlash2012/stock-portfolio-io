@@ -20,3 +20,11 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Remember me')
 
     submit = SubmitField('Login')
+
+class EmailForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(min=6, max=100)])
+    submit = SubmitField('Submit')
+
+class PasswordForm(FlaskForm):
+    password = PasswordField('New Password: ', validators=[DataRequired(), Length(min=13, max=21)])
+    submit = SubmitField('Submit')

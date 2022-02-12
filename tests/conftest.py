@@ -1,7 +1,9 @@
 import pytest
 from project import create_app
 from flask import current_app
+from project import db
 from project.models import Stock, User
+from datetime import datetime
 
 @pytest.fixture(scope='module')
 def test_client():
@@ -13,7 +15,7 @@ def test_client():
     with flask_app.test_client() as testing_client:
         # establish an app ctx be4 accessing the logger
         with flask_app.app_context():
-            current_app.logger.info('In the test_client() fixture...')
+            flask_app.logger.info('Creating database tables in test_client fixture...')
     
 
         yield testing_client #where the test happens
@@ -53,3 +55,32 @@ def log_in_default_user(test_client, register_default_user):
 
     # Log out the default user
     test_client.get('/users/logout', follow_redirects=True)
+
+@pytest.fixture(scope='function')
+def confirm_email_default_user(test_client, log_in_default_user):
+    # Mark the user as having their email address confirmed
+    user = User.query.filter_by(email='geisa@email.com').first()
+    user.email_confirmed = True
+    user.email_confirmed_on = datetime(2020, 7, 8)
+    db.session.add(user)
+    db.session.commit()
+
+    yield user  # this is where the testing happens!
+
+    # Mark the user as not having their email address confirmed (clean up)
+    user = User.query.filter_by(email='geisa@email.com').first()
+    user.email_confirmed = False
+    user.email_confirmed_on = None
+    db.session.add(user)
+    db.session.commit()
+
+@pytest.fixture(scope='function')
+def afterwards_reset_default_user_password():
+    yield  # this is where the testing happens!
+
+    # Since a test using this fixture could change the password for the default user,
+    # reset the password back to the default password
+    user = User.query.filter_by(email='geisa@email.com').first()
+    user.set_password('FlaskIsAwesome123')
+    db.session.add(user)
+    db.session.commit()
