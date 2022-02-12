@@ -1,4 +1,4 @@
-# from project import mail
+from project import mail
 from project.models import User
 # from itsdangerous import URLSafeTimedSerializer
 from flask import current_app
@@ -26,13 +26,21 @@ def test_valid_registration(test_client):
     WHEN the '/users/register' page is posted to (POST) with valid data
     THEN check the res is valid and the user is registered
     """
-    res = test_client.post('/users/register',
-    data={'name':'Geisa Dias', 'email': 'geisa@email.com',
-    'password': 'FlaskIsAwesome123'},
-    follow_redirects=True)
-    assert res.status_code == 200
-    assert b'Thanks for registering, Geisa!' in res.data
-    assert b'Flask Stock Portfolio App' in res.data
+
+    with mail.record_messages() as outbox:
+        res = test_client.post('/users/register',
+        data={'name':'Geisa Dias', 'email': 'geisa@email.com',
+        'password': 'FlaskIsAwesome123'},
+        follow_redirects=True)
+        assert res.status_code == 200
+        assert b'Thanks for registering, Geisa!' in res.data
+        assert b'Kozuki-IO' in res.data
+
+        # related to flask-mail
+        assert len(outbox) == 1
+        assert outbox[0].subject == 'Registration - Kozuki-IO'
+        assert outbox[0].sender == 'kozuki.app@gmail.com'
+        assert outbox[0].recipients[0] == 'geisa@email.com'
 
 # test for a missing field ij the sign up form
 def test_invalid_registration(test_client):

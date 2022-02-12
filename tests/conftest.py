@@ -7,6 +7,7 @@ from project.models import Stock, User
 def test_client():
     flask_app = create_app()
     flask_app.config.from_object('config.TestingConfig')
+    flask_app.extensions['mail'].suppress = True #to avoid sending emails during the tests
 
     # Create a test client using the Flask application configured for testing
     with flask_app.test_client() as testing_client:

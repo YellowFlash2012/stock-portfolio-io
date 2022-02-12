@@ -1,11 +1,16 @@
 from . import users_blueprint
-from flask import render_template, abort, flash, request, current_app, redirect, url_for
+from flask import render_template, abort, flash, request, current_app, redirect, url_for, copy_current_request_context
 from .forms import RegistrationForm, LoginForm
 from flask_login import login_user, current_user, login_required, logout_user
 from project.models import User
-from project import db
+
+from project import db, mail
+from flask_mail import Message
+
 from sqlalchemy.exc import IntegrityError
 from urllib.parse import urlparse
+
+from threading import Thread
 
 @users_blueprint.route('/about', methods=['GET', 'POST'])
 def about():
@@ -35,8 +40,22 @@ def register():
                 
                 # data saved in logger
                 current_app.logger.info(f'Registered new user: {form.name.data, form.email.data}!')
+
+                # Send an email to the user that they have been registered - NEW!!
+                @copy_current_request_context
+                def send_email(message):
+                    with current_app.app_context():
+                        mail.send(message)
+
+                msg = Message(subject='Successful Sign up - Kozuki-IO App',
+                body='Our heartfelt thanks for your registration on our App! Welcome to the family',
+                recipients=[form.email.data])
+                mail.send(msg)
+
+                email_thread = Thread(target=send_email, args=[msg])
+                email_thread.start()
                 
-                return redirect(url_for('stocks.home'))
+                return redirect(url_for('users.login'))
 
             except IntegrityError:
                 db.session.rollback()

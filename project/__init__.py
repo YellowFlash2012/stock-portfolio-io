@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager
+from flask_mail import Mail
 
 
 
@@ -22,6 +23,9 @@ csrf_protection = CSRFProtect()
 # auth config
 login = LoginManager()
 login.login_view = "users.login"
+
+# mail config
+mail = Mail()
 
 def create_app():
     app = Flask(__name__)
@@ -101,4 +105,6 @@ def init_ext(app):
     @login.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
+
+    mail.init_app(app)
 
