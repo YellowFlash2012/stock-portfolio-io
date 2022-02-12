@@ -12,6 +12,10 @@ from urllib.parse import urlparse
 
 from threading import Thread
 
+from itsdangerous import URLSafeTimedSerializer
+from itsdangerous.exc import BadSignature
+from datetime import datetime
+
 @users_blueprint.route('/about', methods=['GET', 'POST'])
 def about():
     return render_template('users/about.html', company_name='Kozuki-IO')
@@ -32,11 +36,13 @@ def register():
         if form.validate_on_submit():
             try:
                 new_user = User(form.name.data, form.email.data, form.password.data)
+                
                 db.session.add(new_user)
+                
                 db.session.commit()
                 
                 # msg in case of successful signup
-                flash(f'Success! Thanks for registering, {new_user.name}!')
+                flash(f'Success! Thanks for registering, {new_user.name}! Please check your email to confirm your email address.', 'success')
                 
                 # data saved in logger
                 current_app.logger.info(f'Registered new user: {form.name.data, form.email.data}!')
@@ -47,10 +53,12 @@ def register():
                     with current_app.app_context():
                         mail.send(message)
 
-                msg = Message(subject='Successful Sign up - Kozuki-IO App',
-                body='Our heartfelt thanks for your registration on our App! Welcome to the family',
-                recipients=[form.email.data])
-                mail.send(msg)
+                # msg = Message(subject='Successful Sign up - Kozuki-IO App',
+                # body='Our heartfelt thanks for your registration on our App! Welcome to the family',
+                # recipients=[form.email.data])
+                # mail.send(msg)
+
+                msg = generate_confirmation_email(form.email.data)
 
                 email_thread = Thread(target=send_email, args=[msg])
                 email_thread.start()
@@ -119,3 +127,41 @@ def logout():
 @login_required
 def user_profile():
     return render_template('users/profile.html')
+
+def generate_confirmation_email(user_email):
+    confirm_serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+
+    confirm_url = url_for('users.confirm_email',
+    token=confirm_serializer.dumps(user_email, salt='email-confirmation-salt'),
+    _external=True)
+
+    return Message(subject='Kozuki-IO App - Confirm Your Email Address',
+    html=render_template('users/email_confirmation.html', confirm_url=confirm_url),
+    recipients=[user_email])
+
+@users_blueprint.route('/confirm/<token>')
+def confirm_email(token):
+    try:
+        confirm_serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        
+        email = confirm_serializer.loads(token, salt='email-confirmation-salt', max_age=3600)
+    except BadSignature:
+        flash('The confirmation link is invalid or has expired.', 'error')
+        current_app.logger.info(f'Invalid or expired confirmation link received from IP address: {request.remote_addr}')
+        return redirect(url_for('users.login'))
+
+    user = User.query.filter_by(email=email).first()
+
+    if user.email_confirmed:
+        flash('Account already confirmed. Please login.', 'info')
+        current_app.logger.info(f'Confirmation link received for a confirmed user: {user.email}')
+    else:
+        user.email_confirmed = True
+        user.email_confirmed_on = datetime.now()
+        db.session.add(user)
+        db.session.commit()
+
+        flash('Thank you for confirming your email address!', 'success')
+        current_app.logger.info(f'Email address confirmed for: {user.email}')
+
+    return redirect(url_for('stocks.home'))

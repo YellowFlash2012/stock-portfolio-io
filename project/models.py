@@ -1,6 +1,8 @@
 from project import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from datetime import datetime
+
 class Stock(db.Model):
     """
     Class that represents a purchased stock in a portfolio.
@@ -51,10 +53,23 @@ class User(db.Model):
     password_hashed = db.Column(db.String(128))
     # set to 128 bcz password_hash is 102 characters long
 
+    registered_on = db.Column(db.DateTime)
+
+    email_confirmation_sent_on = db.Column(db.DateTime)
+
+    email_confirmed = db.Column(db.Boolean, default=False)
+
+    email_confirmed_on = db.Column(db.DateTime)
+
     def __init__(self, name: str, email: str, password_plaintext: str):
         self.name = name
         self.email = email
         self.password_hashed = self._generate_password_hash(password_plaintext)
+        
+        self.registered_on = datetime.now()
+        self.email_confirmation_sent_on = datetime.now()
+        self.email_confirmed = False
+        self.email_confirmed_on = None
 
     def is_password_correct(self, password_plaintext: str):
         return check_password_hash(self.password_hashed, password_plaintext)

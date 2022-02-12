@@ -64,7 +64,7 @@ def configure_logging(app):
     app.logger.removeHandler(default_handler)
 
     # Log that the Flask application is starting
-    app.logger.info('Starting the Flask Stock Portfolio App...')
+    app.logger.info('Starting the Kozuki-IO App...')
 
 def register_app_callbacks(app):
     @app.before_request
