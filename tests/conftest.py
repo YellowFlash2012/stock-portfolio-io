@@ -24,7 +24,7 @@ def test_client():
 
 @pytest.fixture(scope='module')
 def new_stock():
-    stock = Stock('AAPL', '16', '406.78')
+    stock = Stock('AAPL', '16', '406.78', 7, datetime(2022, 2, 12))
     return stock
 
 @pytest.fixture(scope='module')

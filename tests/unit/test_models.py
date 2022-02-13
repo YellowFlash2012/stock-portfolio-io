@@ -13,6 +13,11 @@ def test_new_stock(new_stock):
     assert new_stock.stock_symbol == 'AAPL'
     assert new_stock.number_of_shares == 16
     assert new_stock.purchase_price == 406.78
+    assert new_stock.user_id == 7
+
+    assert new_stock.purchase_date.year == 2022
+    assert new_stock.purchase_date.month == 2
+    assert new_stock.purchase_date.day == 12
 
 def test_new_user(new_user):
     """

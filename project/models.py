@@ -25,10 +25,18 @@ class Stock(db.Model):
     number_of_shares = db.Column(db.Integer, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)
 
-    def __init__(self, stock_symbol: str, number_of_shares: str, purchase_price: str):
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    purchase_date = db.Column(db.DateTime)
+
+    def __init__(self, stock_symbol: str, number_of_shares: str, purchase_price: str, user_id: int, purchase_date=None):
         self.stock_symbol = stock_symbol
         self.number_of_shares = int(number_of_shares)
         self.purchase_price = float(purchase_price)
+
+        self.user_id = user_id
+
+        self.purchase_date = purchase_date
 
     def __repr__(self):
         return f'{self.stock_symbol} - {self.number_of_shares} shares purchased at ${self.purchase_price}'
@@ -60,6 +68,8 @@ class User(db.Model):
     email_confirmed = db.Column(db.Boolean, default=False)
 
     email_confirmed_on = db.Column(db.DateTime)
+
+    stocks = db.relationship('Stock', backref='user', lazy='dynamic')
 
     def __init__(self, name: str, email: str, password_plaintext: str):
         self.name = name
