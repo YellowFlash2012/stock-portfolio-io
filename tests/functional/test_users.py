@@ -83,7 +83,7 @@ def test_get_login_page(test_client):
     """
     GIVEN a Flask application configured for testing
     WHEN the '/users/login' page is requested (GET)
-    THEN check the response is valid
+    THEN check the res is valid
     """
     res = test_client.get('/users/login')
     assert res.status_code == 200
@@ -526,3 +526,34 @@ def test_post_change_password_not_logged_in(test_client):
     assert res.status_code == 200
     assert b'Please log in to access this page.' in res.data
     assert b'Password has been updated!' not in res.data
+
+# ****tests related to resending email confirmation****
+def test_get_resend_email_confirmation_logged_in(test_client, log_in_default_user):
+    """
+    GIVEN a Flask application configured for testing with the user logged in
+    WHEN the '/users/resend_email_confirmation' page is retrieved (GET)
+    THEN check that an email was queued up to send
+    """
+    with mail.record_messages() as outbox:
+        res = test_client.get('/users/resend_email_confirmation', follow_redirects=True)
+        assert res.status_code == 200
+        assert b'Email sent to confirm your email address.  Please check your email inbox or spam folder!' in res.data
+        assert len(outbox) == 1
+        assert outbox[0].subject == 'Kozuki-IO App - Confirm Your Email Address'
+        assert outbox[0].sender == 'kozuki.app@gmail.com'
+        assert outbox[0].recipients[0] == 'geisa@email.com'
+        assert 'http://localhost/users/confirm/' in outbox[0].html
+
+def test_get_resend_email_confirmation_not_logged_in(test_client):
+    """
+    GIVEN a Flask application configured for testing with the user not logged in
+    WHEN the '/users/resend_email_confirmation' page is retrieved (GET)
+    THEN check that an email was not queued up to send
+    """
+    with mail.record_messages() as outbox:
+        res = test_client.get('/users/resend_email_confirmation', follow_redirects=True)
+        assert res.status_code == 200
+        assert b'Email sent to confirm your email address.  Please check your email inbox or spam folder!' not in res.data
+        assert len(outbox) == 0
+        assert b'Please log in to access this page.' in res.data
+
