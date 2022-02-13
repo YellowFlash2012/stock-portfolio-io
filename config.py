@@ -22,6 +22,8 @@ class Config(object):
     MAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', default='')
     MAIL_DEFAULT_SENDER = os.getenv('EMAIL_ADDRESS', default='')
 
+    API_KEY = os.getenv('API_KEY')
+
 
 class ProductionConfig(Config):
     FLASK_ENV = 'production'

@@ -19,6 +19,8 @@
             <th>Number of Shares</th>
             <th>Purchase Price</th>
             <th>Purchase Date</th>
+            <th>Current Share Price</th>
+            <th>Stock Position Value</th>
         </tr>
     </thead>
 
@@ -30,9 +32,23 @@
         <td>{{ stock.number_of_shares }}</td>
         <td>${{ stock.purchase_price }}</td>
         <td>{{ stock.purchase_date.strftime("%Y-%m-%d") }}</td>
+
+        <td>${{ stock.current_price }}</td>
+        <td>${{ stock.position_value }}</td>
         </tr>
         {% endfor %}
     </tbody>
+
+    <tfoot>
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td><b>TOTAL VALUE</b></td>
+        <td><b>${{ value }}</b></td>
+      </tr>
+    </tfoot>
   </table>
   </div>
 </div>

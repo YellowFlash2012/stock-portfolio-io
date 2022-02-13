@@ -4,6 +4,8 @@ This file (test_stocks.py) contains the functional tests for the app.py file.
 from app import app
 import requests
 
+
+
 # ***tests related to the /add_stock page***
 def test_get_add_stock_page(test_client, log_in_default_user):
     """
@@ -32,7 +34,7 @@ def test_get_add_stock_page_not_logged_in(test_client):
     assert b'Add a Stock' not in res.data
     assert b'Please log in to access this page.' in res.data
 
-def test_post_add_stock_page(test_client, log_in_default_user):
+def test_post_add_stock_page(test_client, log_in_default_user, mock_requests_get_success_daily):
     """
     GIVEN a Flask application
     WHEN the '/add_stock' page is posted to (POST)
@@ -74,14 +76,15 @@ def test_post_add_stock_page_not_logged_in(test_client):
     assert b'Please log in to access this page.' in res.data
 
 # **tests related to the list stocks page***
-def test_get_stock_list_logged_in(test_client, add_stocks_for_default_user):
+def test_get_stock_list_logged_in(test_client, add_stocks_for_default_user, mock_requests_get_success_daily):
     """
     GIVEN a Flask application configured for testing, with the default user logged in
     and the default set of stocks in the database
     WHEN the '/stocks' page is requested (GET)
     THEN check the response is valid and each default stock is displayed
     """
-    headers = [b'Stock Symbol', b'Number of Shares', b'Purchase Price', b'Purchase Date']
+    headers = [b'Stock Symbol', b'Number of Shares', b'Purchase Price', b'Purchase Date', b'Current Share Price',
+    b'Stock Position Value', b'TOTAL VALUE']
     data = [b'SAM', b'27', b'301.23', b'2020-07-01',
             b'COST', b'76', b'14.67', b'2019-05-26',
             b'TWTR', b'146', b'34.56', b'2020-02-03']
@@ -105,58 +108,7 @@ def test_get_stock_list_not_logged_in(test_client):
     assert b'List of Stocks' not in res.data
     assert b'Please log in to access this page.' in res.data
 
-########################
-#### Helper Classes ####
-########################
 
-class MockSuccessResponse(object):
-    def __init__(self, url):
-        self.status_code = 200
-        self.url = url
-        self.headers = {'blaa': '1234'}
-
-    def json(self):
-        return {
-            'Meta Data': {
-                "2. Symbol": "MSFT",
-                "3. Last Refreshed": "2022-02-10"
-            },
-            'Time Series (Daily)': {
-                "2022-02-10": {
-                    "4. close": "302.3800",
-                },
-                "2022-02-09": {
-                    "4. close": "301.9800",
-                }
-            }
-        }
-
-def test_monkeypatch_get_success(monkeypatch):
-    """
-    GIVEN a Flask application and a monkeypatched version of requests.get()
-    WHEN the HTTP response is set to successful
-    THEN check the HTTP response
-    """
-    def mock_get(url):
-        return MockSuccessResponse(url)
-
-    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
-    monkeypatch.setattr(requests, 'get', mock_get)
-    r = requests.get(url)
-    assert r.status_code == 200
-    assert r.url == url
-    assert 'MSFT' in r.json()['Meta Data']['2. Symbol']
-    assert '2022-02-10' in r.json()['Meta Data']['3. Last Refreshed']
-    assert '302.3800' in r.json()['Time Series (Daily)']['2022-02-10']['4. close']
-
-class MockFailedResponse(object):
-    def __init__(self, url):
-        self.status_code = 404
-        self.url = url
-        self.headers = {'blaa': '1234'}
-
-    def json(self):
-        return {'error': 'bad'}
 
 def test_monkeypatch_get_failure(monkeypatch):
     """

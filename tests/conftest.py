@@ -1,9 +1,105 @@
 import pytest
+import requests
 from project import create_app
 from flask import current_app
 from project import db
 from project.models import Stock, User
 from datetime import datetime
+
+########################
+#### Helper Classes ####
+########################
+
+class MockSuccessResponse(object):
+    def __init__(self, url):
+        self.status_code = 200
+        self.url = url
+        self.headers = {'blaa': '1234'}
+
+    def json(self):
+        return {
+            'Meta Data': {
+                "2. Symbol": "MSFT",
+                "3. Last Refreshed": "2022-02-10"
+            },
+            'Time Series (Daily)': {
+                "2022-02-10": {
+                    "4. close": "302.3800",
+                },
+                "2022-02-09": {
+                    "4. close": "301.9800",
+                }
+            }
+        }
+
+def test_monkeypatch_get_success(monkeypatch):
+    """
+    GIVEN a Flask application and a monkeypatched version of requests.get()
+    WHEN the HTTP response is set to successful
+    THEN check the HTTP response
+    """
+    def mock_get(url):
+        return MockSuccessResponse(url)
+
+    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
+    monkeypatch.setattr(requests, 'get', mock_get)
+    r = requests.get(url)
+    assert r.status_code == 200
+    assert r.url == url
+    assert 'MSFT' in r.json()['Meta Data']['2. Symbol']
+    assert '2022-02-10' in r.json()['Meta Data']['3. Last Refreshed']
+    assert '302.3800' in r.json()['Time Series (Daily)']['2022-02-10']['4. close']
+
+class MockFailedResponse(object):
+    def __init__(self, url):
+        self.status_code = 404
+        self.url = url
+        self.headers = {'blaa': '1234'}
+
+    def json(self):
+        return {'error': 'bad'}
+
+class MockSuccessResponseDaily(object):
+    def __init__(self, url):
+        self.status_code = 200
+        self.url = url
+
+    def json(self):
+        return {
+            'Meta Data': {
+                "2. Symbol": "AAPL",
+                "3. Last Refreshed": "2020-03-24"
+            },
+            'Time Series (Daily)': {
+                "2022-02-10": {
+                    "4. close": "148.3400",
+                },
+                "2022-02-09": {
+                    "4. close": "135.9800",
+                }
+            }
+        }
+
+
+class MockApiRateLimitExceededResponse(object):
+    def __init__(self, url):
+        self.status_code = 200
+        self.url = url
+
+    def json(self):
+        return {
+            'Note': 'Thank you for using Alpha Vantage! Our standard API call frequency is ' +
+                    '5 calls per minute and 500 calls per day.'
+        }
+
+
+class MockFailedResponse(object):
+    def __init__(self, url):
+        self.status_code = 404
+        self.url = url
+
+    def json(self):
+        return {'error': 'bad'}
 
 @pytest.fixture(scope='module')
 def test_client():
@@ -22,7 +118,7 @@ def test_client():
 
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def new_stock():
     stock = Stock('AAPL', '16', '406.78', 7, datetime(2022, 2, 12))
     return stock
@@ -101,3 +197,29 @@ def add_stocks_for_default_user(test_client, log_in_default_user):
     'purchase_price': '34.56',
     'purchase_date': '2020-02-03'})
     return
+
+# ***fixtures for moking requests.get()***
+@pytest.fixture(scope='function')
+def mock_requests_get_success_daily(monkeypatch):
+    # Create a mock for the requests.get() call to prevent making the actual API call
+    def mock_get(url):
+        return MockSuccessResponseDaily(url)
+
+    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
+    monkeypatch.setattr(requests, 'get', mock_get)
+
+@pytest.fixture(scope='function')
+def mock_requests_get_api_rate_limit_exceeded(monkeypatch):
+    def mock_get(url):
+        return MockApiRateLimitExceededResponse(url)
+
+    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
+    monkeypatch.setattr(requests, 'get', mock_get)
+
+@pytest.fixture(scope='function')
+def mock_requests_get_failure(monkeypatch):
+    def mock_get(url):
+        return MockFailedResponse(url)
+
+    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
+    monkeypatch.setattr(requests, 'get', mock_get)

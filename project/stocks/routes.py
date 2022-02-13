@@ -55,7 +55,16 @@ def add_stock():
 @login_required
 def stocks():
     stocks = Stock.query.order_by(Stock.id).filter_by(user_id=current_user.id).all()
-    return render_template('stocks/stock.html', stocks = stocks)
+
+    current_account_value = 0.0
+    for stock in stocks:
+        stock.get_stock_data()
+        db.session.add(stock)
+        current_account_value += stock.get_stock_position_value()
+
+    db.session.commit()
+
+    return render_template('stocks/stock.html', stocks = stocks, value=round(current_account_value, 2))
 
 # custom CLI definitions
 @stocks_blueprint.cli.command('create_default_set')

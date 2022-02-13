@@ -1,7 +1,7 @@
 """
 This file (test_models.py) contains the unit tests for the models.py file.
 """
-
+from datetime import datetime
 
 def test_new_stock(new_stock):
     """
@@ -38,3 +38,68 @@ def test_set_password(new_user):
     assert new_user.email == 'geisa@email.com'
     assert new_user.password_hashed != 'FlaskIsStillAwesome456'
     assert new_user.is_password_correct('FlaskIsStillAwesome456')
+
+# this test uses the mock_requests_get_success_daily fixture to mimic a successful response from Alpha Vantage
+def test_get_stock_data_success(new_stock, mock_requests_get_success_daily):
+    """
+    GIVEN a Flask application configured for testing and a monkeypatched version of requests.get()
+    WHEN the HTTP response is set to successful
+    THEN check that the stock data is updated
+    """
+    new_stock.get_stock_data()
+    assert new_stock.stock_symbol == 'AAPL'
+    assert new_stock.number_of_shares == 16
+    assert new_stock.purchase_price == 147.78  
+    assert new_stock.purchase_date.date() == datetime(2022, 2, 10).date()
+    assert new_stock.current_price == 148.34  
+    assert new_stock.current_price_date.date() == datetime.now().date()
+    assert new_stock.position_value == (148.34*16)
+
+def test_get_stock_data_api_rate_limit_exceeded(new_stock, mock_requests_get_api_rate_limit_exceeded):
+    """
+    GIVEN a Flask application configured for testing and a monkeypatched version of requests.get()
+    WHEN the HTTP response is set to successful but the API rate limit is exceeded
+    THEN check that the stock data is not updated
+    """
+    new_stock.get_stock_data()
+    assert new_stock.stock_symbol == 'AAPL'
+    assert new_stock.number_of_shares == 16
+    assert new_stock.purchase_price == 148.78
+    assert new_stock.purchase_date.date() == datetime(2022, 2, 10).date()
+    assert new_stock.current_price == 0
+    assert new_stock.current_price_date is None
+    assert new_stock.position_value == 0
+
+def test_get_stock_data_failure(new_stock, mock_requests_get_failure):
+    """
+    GIVEN a Flask application configured for testing and a monkeypatched version of requests.get()
+    WHEN the HTTP response is set to failed
+    THEN check that the stock data is not updated
+    """
+    new_stock.get_stock_data()
+    assert new_stock.stock_symbol == 'AAPL'
+    assert new_stock.number_of_shares == 16
+    assert new_stock.purchase_price == 147.78
+    assert new_stock.purchase_date.date() == datetime(2022, 2, 10).date()
+    assert new_stock.current_price == 0
+    assert new_stock.current_price_date is None
+    assert new_stock.position_value == 0
+
+def test_get_stock_data_success_two_calls(new_stock, mock_requests_get_success_daily):
+    """
+    GIVEN a Flask application configured for testing and a monkeypatched version of requests.get()
+    WHEN the HTTP response is set to successful
+    THEN check that the stock data is updated
+    """
+    assert new_stock.stock_symbol == 'AAPL'
+    assert new_stock.current_price == 0
+    assert new_stock.current_price_date is None
+    assert new_stock.position_value == 0
+    new_stock.get_stock_data()
+    assert new_stock.current_price == 148.34
+    assert new_stock.current_price_date.date() == datetime.now().date()
+    assert new_stock.position_value == (148.34*16)
+    new_stock.get_stock_data()
+    assert new_stock.current_price == 148.34
+    assert new_stock.current_price_date.date() == datetime.now().date()
+    assert new_stock.position_value == (148.34*16)

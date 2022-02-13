@@ -1,7 +1,50 @@
+from flask import current_app
+import requests
+
 from project import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import datetime
+
+def create_alpha_vantage_url_daily_compact(symbol: str) -> str:
+    return 'https://www.alphavantage.co/query?function={}&symbol={}&outputsize={}&apikey={}'.format(
+        'TIME_SERIES_DAILY',
+        symbol,
+        'compact',
+        current_app.config['API_KEY']
+    )
+
+def get_current_stock_price(symbol: str) -> float:
+    current_price = 0.0
+    url = create_alpha_vantage_url_daily_compact(symbol)
+
+    # Attempt the GET call to Alpha Vantage and check that a ConnectionError does
+    # not occur, which happens when the GET call fails due to a network issue
+    try:
+        r = requests.get(url)
+    except requests.exceptions.ConnectionError:
+        current_app.logger.error(
+            f'Error! Network problem preventing retrieving the stock data ({symbol})!')
+
+    # Status code returned from Alpha Vantage needs to be 200 (OK) to process stock data
+    if r.status_code != 200:
+        current_app.logger.warning(f'Error! Received unexpected status code ({r.status_code}) '
+        f'when retrieving daily stock data ({symbol})!')
+        return current_price
+
+    daily_data = r.json()
+
+    
+    if 'Time Series (Daily)' not in daily_data:
+        current_app.logger.warning(f'Could not find the Time Series (Daily) key when retrieving '
+        f'the daily stock data ({symbol})!')
+        return current_price
+
+    for element in daily_data['Time Series (Daily)']:
+        current_price = float(daily_data['Time Series (Daily)'][element]['4. close'])
+        break
+
+    return current_price
 
 class Stock(db.Model):
     """
@@ -29,6 +72,10 @@ class Stock(db.Model):
 
     purchase_date = db.Column(db.DateTime)
 
+    current_price = db.Column(db.Float)
+    current_price_date = db.Column(db.DateTime)
+    position_value = db.Column(db.Float)
+
     def __init__(self, stock_symbol: str, number_of_shares: str, purchase_price: str, user_id: int, purchase_date=None):
         self.stock_symbol = stock_symbol
         self.number_of_shares = int(number_of_shares)
@@ -37,6 +84,29 @@ class Stock(db.Model):
         self.user_id = user_id
 
         self.purchase_date = purchase_date
+
+        self.current_price = 0
+        self.current_price_date = None
+        self.position_value = 0
+
+    # to retrieve securities data
+    def get_stock_data(self):
+        if self.current_price_date is None or self.current_price_date.date() != datetime.now().date():
+
+            current_price = get_current_stock_price(self.stock_symbol)
+
+            if current_price > 0.0:
+                self.current_price = current_price
+
+                self.current_price_date = datetime.now()
+
+                self.position_value = self.current_price * self.number_of_shares
+
+                current_app.logger.debug(f'Retrieved current price {self.current_price} '
+                f'for the stock data ({self.stock_symbol})!')
+
+    def get_stock_position_value(self)-> float:
+        return float(self.position_value)
 
     def __repr__(self):
         return f'{self.stock_symbol} - {self.number_of_shares} shares purchased at ${self.purchase_price}'
