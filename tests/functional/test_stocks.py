@@ -2,6 +2,7 @@
 This file (test_stocks.py) contains the functional tests for the app.py file.
 """
 from app import app
+import requests
 
 # ***tests related to the /add_stock page***
 def test_get_add_stock_page(test_client, log_in_default_user):
@@ -103,3 +104,73 @@ def test_get_stock_list_not_logged_in(test_client):
     assert res.status_code == 200
     assert b'List of Stocks' not in res.data
     assert b'Please log in to access this page.' in res.data
+
+########################
+#### Helper Classes ####
+########################
+
+class MockSuccessResponse(object):
+    def __init__(self, url):
+        self.status_code = 200
+        self.url = url
+        self.headers = {'blaa': '1234'}
+
+    def json(self):
+        return {
+            'Meta Data': {
+                "2. Symbol": "MSFT",
+                "3. Last Refreshed": "2022-02-10"
+            },
+            'Time Series (Daily)': {
+                "2022-02-10": {
+                    "4. close": "302.3800",
+                },
+                "2022-02-09": {
+                    "4. close": "301.9800",
+                }
+            }
+        }
+
+def test_monkeypatch_get_success(monkeypatch):
+    """
+    GIVEN a Flask application and a monkeypatched version of requests.get()
+    WHEN the HTTP response is set to successful
+    THEN check the HTTP response
+    """
+    def mock_get(url):
+        return MockSuccessResponse(url)
+
+    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
+    monkeypatch.setattr(requests, 'get', mock_get)
+    r = requests.get(url)
+    assert r.status_code == 200
+    assert r.url == url
+    assert 'MSFT' in r.json()['Meta Data']['2. Symbol']
+    assert '2022-02-10' in r.json()['Meta Data']['3. Last Refreshed']
+    assert '302.3800' in r.json()['Time Series (Daily)']['2022-02-10']['4. close']
+
+class MockFailedResponse(object):
+    def __init__(self, url):
+        self.status_code = 404
+        self.url = url
+        self.headers = {'blaa': '1234'}
+
+    def json(self):
+        return {'error': 'bad'}
+
+def test_monkeypatch_get_failure(monkeypatch):
+    """
+    GIVEN a Flask application and a monkeypatched version of requests.get()
+    WHEN the HTTP response is set to failed
+    THEN check the HTTP response
+    """
+    def mock_get(url):
+        return MockFailedResponse(url)
+
+    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
+    monkeypatch.setattr(requests, 'get', mock_get)
+    r = requests.get(url)
+    print(r.json())
+    assert r.status_code == 404
+    assert r.url == url
+    assert 'bad' in r.json()['error']
