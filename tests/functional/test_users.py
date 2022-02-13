@@ -9,7 +9,7 @@ def test_get_registration_page(test_client):
     """
     GIVEN a Flask application configured for testing
     WHEN the '/users/register' page is requested (GET)
-    THEN check the response is valid
+    THEN check the res is valid
     """
     res = test_client.get('/users/register')
     assert res.status_code == 200
@@ -173,6 +173,7 @@ def test_invalid_logout_not_logged_in(test_client):
     assert b'Login' in response.data
     assert b'Please log in to access this page.' in response.data
 
+# *****User profile related*****
 def test_user_profile_logged_in(test_client, log_in_default_user):
     """
     GIVEN a Flask application configured for testing and the default user logged in
@@ -181,9 +182,16 @@ def test_user_profile_logged_in(test_client, log_in_default_user):
     """
     res = test_client.get('/users/profile')
     assert res.status_code == 200
-    assert b'Flask Stock Portfolio App' in res.data
+    assert b'Kozuki-IO' in res.data
     assert b'User Profile' in res.data
     assert b'Name: Sakura Chan' in res.data
+    assert b'Account Statistics' in res.data
+    assert b'Joined on' in res.data
+    assert b'Email address has not been confirmed!' in res.data
+    assert b'Email address confirmed on' not in res.data
+    assert b'Account Actions' in res.data
+    assert b'Change Password' in res.data
+    assert b'Resend Email Confirmation' in res.data
 
 def test_user_profile_not_logged_in(test_client):
     """
@@ -193,11 +201,31 @@ def test_user_profile_not_logged_in(test_client):
     """
     res = test_client.get('/users/profile', follow_redirects=True)
     assert res.status_code == 200
-    assert b'Flask Stock Portfolio App' in res.data
+    assert b'Kozuki-IO' in res.data
     assert b'User Profile!' not in res.data
     assert b'Name: Sakura Chan' not in res.data
     assert b'Please log in to access this page.' in res.data
 
+def test_user_profile_logged_in_email_confirmed(test_client, confirm_email_default_user):
+    """
+    GIVEN a Flask application configured for testing and the default user logged in
+    and their email address is confirmed
+    WHEN the '/users/profile' page is requested (GET)
+    THEN check that profile for the current user is presented
+    """
+    res = test_client.get('/users/profile')
+    assert res.status_code == 200
+    assert b'Kozuki-IO' in res.data
+    assert b'User Profile' in res.data
+    assert b'Name: Sakura Chan' in res.data
+    assert b'Account Statistics' in res.data
+    assert b'Joined on' in res.data
+    assert b'Email address has not been confirmed!' not in res.data
+    assert b'Email address confirmed on Wednesday, Feb 08, 2022' in res.data
+    assert b'Account Actions' in res.data
+    assert b'Change Password' in res.data
+    assert b'Resend Email Confirmation' not in res.data
+# *****Navbar related*****
 def test_navigation_bar_logged_in(test_client, log_in_default_user):
     """
     GIVEN a Flask application configured for testing
@@ -430,3 +458,71 @@ def test_post_password_reset_invalid_token(test_client):
     assert res.status_code == 200
     assert b'Your password has been updated!' not in res.data
     assert b'The password reset link is invalid or has expired.' in res.data
+
+# ****tests related to changing passwords 4 logged in users*****
+def test_get_change_password_logged_in(test_client, log_in_default_user):
+    """
+    GIVEN a Flask application configured for testing with the user logged in
+    WHEN the '/users/change_password' page is retrieved (GET)
+    THEN check that the page is retrieved successfully
+    """
+    res = test_client.get('/users/change_password', follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Change Password' in res.data
+    assert b'Current Password' in res.data
+    assert b'New Password' in res.data
+
+def test_get_change_password_not_logged_in(test_client):
+    """
+    GIVEN a Flask application configured for testing with the user NOT logged in
+    WHEN the '/users/change_password' page is retrieved (GET)
+    THEN check an error message is returned to the user
+    """
+    res = test_client.get('/users/change_password', follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Please log in to access this page.' in res.data
+    assert b'Change Password' not in res.data
+
+def test_post_change_password_logged_in_valid_current_password(test_client, log_in_default_user, afterwards_reset_default_user_password):
+    """
+    GIVEN a Flask application configured for testing with the user logged in
+    WHEN the '/users/change_password' page is posted to (POST) with the correct current password
+    THEN check that the user's password is updated correctly
+    """
+    res = test_client.post('/users/change_password',
+    data={'current_password': 'FlaskIsAwesome123',
+    'new_password': 'FlaskIsStillAwesome456'},
+    follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Password has been updated!' in res.data
+    user = User.query.filter_by(email='geisa@email.com').first()
+    assert not user.is_password_correct('FlaskIsAwesome123')
+    assert user.is_password_correct('FlaskIsStillAwesome456')
+
+def test_post_change_password_logged_in_invalid_current_password(test_client, log_in_default_user):
+    """
+    GIVEN a Flask application configured for testing with the user logged in
+    WHEN the '/users/change_password' page is posted to (POST) with the incorrect current password
+    THEN check an error message is returned to the user
+    """
+    res = test_client.post('/users/change_password',
+    data={'current_password': 'FlaskIsNotAwesome123',
+    'new_password': 'FlaskIsStillAwesome456'},
+    follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Password has been updated!' not in res.data
+    assert b'ERROR! Incorrect user credentials!' in res.data
+
+def test_post_change_password_not_logged_in(test_client):
+    """
+    GIVEN a Flask application configured for testing with the user not logged in
+    WHEN the '/users/change_password' page is posted to (POST)
+    THEN check an error message is returned to the user
+    """
+    res = test_client.post('/users/change_password',
+    data={'current_password': 'FlaskIsAwesome123',
+    'new_password': 'FlaskIsStillAwesome456'},
+    follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Please log in to access this page.' in res.data
+    assert b'Password has been updated!' not in res.data

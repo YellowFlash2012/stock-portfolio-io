@@ -1,6 +1,6 @@
 from . import users_blueprint
 from flask import render_template, abort, flash, request, current_app, redirect, url_for, copy_current_request_context
-from .forms import RegistrationForm, LoginForm, EmailForm, PasswordForm
+from .forms import RegistrationForm, LoginForm, EmailForm, PasswordForm, ChangePasswordForm
 from flask_login import login_user, current_user, login_required, logout_user
 from project.models import User
 
@@ -231,3 +231,33 @@ def process_password_reset_token(token):
         return redirect(url_for('users.login'))
 
     return render_template('users/reset_password_with_token.html', form=form)
+
+
+@users_blueprint.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+
+    if form.validate_on_submit():
+        if current_user.is_password_correct(form.current_password.data):
+            current_user.set_password(form.new_password.data)
+            
+            db.session.add(current_user)
+            db.session.commit()
+            
+            flash('Password has been updated!', 'success')
+            
+            current_app.logger.info(f'Password updated for user: {current_user.email}')
+            
+            return redirect(url_for('users.user_profile'))
+        else:
+            flash('ERROR! Incorrect user credentials!')
+            
+            current_app.logger.info(f'Incorrect password change for user: {current_user.email}')
+    
+    return render_template('users/change_password.html', form=form)
+
+
+@users_blueprint.route('/resend_email_confirmation')
+def resend_email_confirmation():
+    return '<h1>Page Is Under Construction</h1>'
