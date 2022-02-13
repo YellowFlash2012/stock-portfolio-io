@@ -3,6 +3,9 @@ import click
 
 from flask import current_app, render_template, request, session, flash, redirect, url_for
 
+from flask_login import login_required, current_user
+from datetime import datetime
+
 from project.models import Stock
 from project import db
 
@@ -30,9 +33,10 @@ def home():
 
 # add new stock to portfolio
 @stocks_blueprint.route('/add_stock', methods=['POST', 'GET'])
+@login_required
 def add_stock():
     if request.method == 'POST':
-        new_stock = Stock(request.form['stock_symbol'], request.form['number_of_shares'], request.form['purchase_price'])
+        new_stock = Stock(request.form['stock_symbol'], request.form['number_of_shares'], request.form['purchase_price'], current_user.id, datetime.fromisoformat(request.form['purchase_date']))
 
         db.session.add(new_stock)
         db.session.commit()
@@ -48,8 +52,9 @@ def add_stock():
 
 # list of stocks in portolio
 @stocks_blueprint.route('/stocks/', methods=['GET', 'POST'])
+@login_required
 def stocks():
-    stocks = Stock.query.order_by(Stock.id).all()
+    stocks = Stock.query.order_by(Stock.id).filter_by(user_id=current_user.id).all()
     return render_template('stocks/stock.html', stocks = stocks)
 
 # custom CLI definitions

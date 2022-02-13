@@ -11,6 +11,7 @@
     <form method="post">
         <!-- CSRF protection implementation -->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
         <div class="field">
             <label for="stockSymbol">Stock Symbol: <em>(required)</em></label>
             <input
@@ -22,7 +23,7 @@
                 pattern="[A-Z]{1,5}"
             />
         </div>
-        <br />
+        
         <div class="field">
             <label for="numberOfShares">Number of Shares:</label>
             <input
@@ -43,6 +44,11 @@
                 required
             />
         </div>
+
+        <div class="field">
+            <label for="purchaseDate">Purchase Date <em>(required)</em></label>
+            <input type="date" id="purchaseDate" name="purchase_date"  placeholder="YYYY-MM-DD" required>
+    </div>
 
         <div class="field">
             <button type="submit">Add Stock</button>
