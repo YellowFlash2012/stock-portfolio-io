@@ -2,6 +2,8 @@
 Flask app for tracking stock portfolio
 ![stock-portfolio-io](/screenshots/stocks.png)
 
+<a href="https://kozuki-io-app.herokuapp.com/">Live preview</a>
+
 This project is inspired by TestDriven.io's Developing web app with python/flask course. The TDD approach is what I was really after with this project course.
 
 # Project scope: 
