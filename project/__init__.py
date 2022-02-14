@@ -89,6 +89,10 @@ def register_error_pages(app):
     def page_not_found(e):
         return render_template('404.html'), 404
 
+    @app.errorhandler(403)
+    def page_forbidden(e):
+        return render_template('403.html'), 403
+
     @app.errorhandler(405)
     def method_not_allowed(e):
         return render_template('405.html'), 405

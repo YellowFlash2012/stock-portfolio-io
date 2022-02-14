@@ -4,6 +4,44 @@ This file (test_stocks.py) contains the functional tests for the app.py file.
 from app import app
 import requests
 
+from tests.conftest import *
+
+########################
+#### Helper Classes ####
+########################
+
+class MockSuccessResponse(object):
+    def __init__(self, url):
+        self.status_code = 200
+        self.url = url
+        self.headers = {'blaa': '1234'}
+
+    def json(self):
+        return {
+            'Meta Data': {
+                "2. Symbol": "MSFT",
+                "3. Last Refreshed": "2020-03-24"
+            },
+            'Time Series (Daily)': {
+                "2020-03-24": {
+                    "4. close": "148.3400",
+                },
+                "2020-03-23": {
+                    "4. close": "135.9800",
+                }
+            }
+        }
+
+
+class MockFailedResponse(object):
+    def __init__(self, url):
+        self.status_code = 404
+        self.url = url
+        self.headers = {'blaa': '1234'}
+
+    def json(self):
+        return {'error': 'bad'}
+
 
 
 # ***tests related to the /add_stock page***
@@ -108,7 +146,23 @@ def test_get_stock_list_not_logged_in(test_client):
     assert b'List of Stocks' not in res.data
     assert b'Please log in to access this page.' in res.data
 
+def test_monkeypatch_get_success(monkeypatch):
+    """
+    GIVEN a Flask application and a monkeypatched version of requests.get()
+    WHEN the HTTP response is set to successful
+    THEN check the HTTP response
+    """
+    def mock_get(url):
+        return MockSuccessResponse(url)
 
+    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
+    monkeypatch.setattr(requests, 'get', mock_get)
+    r = requests.get(url)
+    assert r.status_code == 200
+    assert r.url == url
+    assert 'MSFT' in r.json()['Meta Data']['2. Symbol']
+    assert '2022-02-10' in r.json()['Meta Data']['3. Last Refreshed']
+    assert '302.3800' in r.json()['Time Series (Daily)']['2022-02-10']['4. close']
 
 def test_monkeypatch_get_failure(monkeypatch):
     """
@@ -126,3 +180,49 @@ def test_monkeypatch_get_failure(monkeypatch):
     assert r.status_code == 404
     assert r.url == url
     assert 'bad' in r.json()['error']
+
+# ***tests related to individual stocks***
+def test_get_stock_detail_page(test_client, add_stocks_for_default_user, mock_requests_get_success_weekly):
+    """
+    GIVEN a Flask application configured for testing, with the default user logged in
+    and the default set of stocks in the database
+    WHEN the '/stocks/3' page is retrieved (GET) and the response from Alpha Vantage was successful
+    THEN check that the response is valid including a chart
+    """
+    res = test_client.get('/stocks/3', follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Stock Details' in res.data
+    assert b'canvas id="stockChart"' in res.data
+
+def test_get_stock_detail_page_failed_response(test_client, add_stocks_for_default_user, mock_requests_get_failure):
+    """
+    GIVEN a Flask application configured for testing, with the default user logged in
+    and the default set of stocks in the database
+    WHEN the '/stocks/3' page is retrieved (GET)  but the response from Alpha Vantage failed
+    THEN check that the response is valid but the chart is not displayed
+    """
+    res = test_client.get('/stocks/3', follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Stock Details' in res.data
+    assert b'canvas id="stockChart"' not in res.data
+
+def test_get_stock_detail_page_incorrect_user(test_client, log_in_second_user):
+    """
+    GIVEN a Flask application configured for testing with the second user logged in
+    WHEN the '/stocks/3' page is retrieved (GET) by the incorrect user
+    THEN check that a 403 error is returned
+    """
+    res = test_client.get('/stocks/3')
+    assert res.status_code == 403
+    assert b'Stock Details' not in res.data
+    assert b'canvas id="stockChart"' not in res.data
+
+def test_get_stock_detail_page_invalid_stock(test_client, log_in_default_user):
+    """
+    GIVEN a Flask application configured for testing with the default user logged in
+    WHEN the '/stocks/234' page is retrieved (GET)
+    THEN check that a 404 error is returned
+    """
+    response = test_client.get('/stocks/234')
+    assert response.status_code == 404
+    assert b'Stock Details' not in response.data

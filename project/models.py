@@ -4,8 +4,9 @@ import requests
 from project import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
+# ***daily stock price***
 def create_alpha_vantage_url_daily_compact(symbol: str) -> str:
     return 'https://www.alphavantage.co/query?function={}&symbol={}&outputsize={}&apikey={}'.format(
         'TIME_SERIES_DAILY',
@@ -14,6 +15,9 @@ def create_alpha_vantage_url_daily_compact(symbol: str) -> str:
         current_app.config['API_KEY']
     )
 
+
+
+# ***method to get daily stock data***
 def get_current_stock_price(symbol: str) -> float:
     current_price = 0.0
     url = create_alpha_vantage_url_daily_compact(symbol)
@@ -46,6 +50,7 @@ def get_current_stock_price(symbol: str) -> float:
 
     return current_price
 
+
 class Stock(db.Model):
     """
     Class that represents a purchased stock in a portfolio.
@@ -55,10 +60,6 @@ class Stock(db.Model):
         number of shares (type: integer)
         purchase price (type: integer)
 
-    Note: Due to a limitation in the data types supported by SQLite, the purchase price is stored as an integer:
-    $24.10 -> 2410
-    $100.00 -> 10000
-    $87.65 -> 8765
     """
 
     __tablename__ = 'stocks'
@@ -89,6 +90,9 @@ class Stock(db.Model):
         self.current_price_date = None
         self.position_value = 0
 
+    def __repr__(self):
+        return f'{self.stock_symbol} - {self.number_of_shares} shares purchased at ${self.purchase_price}'
+
     # to retrieve securities data
     def get_stock_data(self):
         if self.current_price_date is None or self.current_price_date.date() != datetime.now().date():
@@ -108,8 +112,63 @@ class Stock(db.Model):
     def get_stock_position_value(self)-> float:
         return float(self.position_value)
 
-    def __repr__(self):
-        return f'{self.stock_symbol} - {self.number_of_shares} shares purchased at ${self.purchase_price}'
+
+    # ***weekly stock price***
+    def create_alpha_vantage_get_url_weekly(self):
+        return 'https://www.alphavantage.co/query?function={}&symbol={}&apikey={}'.format(
+        'TIME_SERIES_WEEKLY_ADJUSTED',
+        self.stock_symbol,
+        current_app.config['API_KEY']
+    )
+
+    # ***method to get weekly stock data***
+    def get_weekly_stock_data(self):
+        title = 'Stock chart is unavailable.'
+        labels = []
+        values = []
+        url = self.create_alpha_vantage_get_url_weekly()
+
+        try:
+            r = requests.get(url)
+        except requests.exceptions.ConnectionError:
+            current_app.logger.info(
+                f'Error! Network problem preventing retrieving the weekly stock data ({self.stock_symbol})!')
+
+        # Status code returned from Alpha Vantage needs to be 200 (OK) to process stock data
+        if r.status_code != 200:
+            current_app.logger.warning(f'Error! Received unexpected status code ({r.status_code}) '
+            f'when retrieving weekly stock data ({self.stock_symbol})!')
+            return title, '', ''
+
+        weekly_data = r.json()
+
+        # The key of 'Weekly Adjusted Time Series' needs to be present in order to process the stock data
+        # Typically, this key will not be present if the API rate limit has been exceeded.
+        if 'Weekly Adjusted Time Series' not in weekly_data:
+            current_app.logger.warning(f'Could not find the Weekly Adjusted Time Series key when retrieving '
+            f'the weekly stock data ({self.stock_symbol})!')
+            return title, '', ''
+
+        title = f'Weekly Prices ({self.stock_symbol})'
+
+        # Determine the start date as either:
+        #   - If the start date is less than 12 weeks ago, then use the date from 12 weeks ago
+        #   - Otherwise, use the purchase date
+        start_date = self.purchase_date
+        if (datetime.now() - self.purchase_date) < timedelta(weeks=12):
+            start_date = datetime.now() - timedelta(weeks=12)
+
+        for element in weekly_data['Weekly Adjusted Time Series']:
+            date = datetime.fromisoformat(element)
+            if date.date() > start_date.date():
+                labels.append(date)
+                values.append(weekly_data['Weekly Adjusted Time Series'][element]['4. close'])
+
+        # Reverse the elements as the data from Alpha Vantage is read in latest to oldest
+        labels.reverse()
+        values.reverse()
+
+        return title, labels, values
 
 
 class User(db.Model):

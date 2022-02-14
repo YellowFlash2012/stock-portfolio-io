@@ -1,8 +1,8 @@
 import pytest
 import requests
-from project import create_app
+from project import create_app, db
 from flask import current_app
-from project import db
+
 from project.models import Stock, User
 from datetime import datetime
 
@@ -32,23 +32,7 @@ class MockSuccessResponse(object):
             }
         }
 
-def test_monkeypatch_get_success(monkeypatch):
-    """
-    GIVEN a Flask application and a monkeypatched version of requests.get()
-    WHEN the HTTP response is set to successful
-    THEN check the HTTP response
-    """
-    def mock_get(url):
-        return MockSuccessResponse(url)
 
-    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
-    monkeypatch.setattr(requests, 'get', mock_get)
-    r = requests.get(url)
-    assert r.status_code == 200
-    assert r.url == url
-    assert 'MSFT' in r.json()['Meta Data']['2. Symbol']
-    assert '2022-02-10' in r.json()['Meta Data']['3. Last Refreshed']
-    assert '302.3800' in r.json()['Time Series (Daily)']['2022-02-10']['4. close']
 
 class MockFailedResponse(object):
     def __init__(self, url):
@@ -100,6 +84,35 @@ class MockFailedResponse(object):
 
     def json(self):
         return {'error': 'bad'}
+
+
+class MockSuccessResponseWeekly(object):
+    def __init__(self, url):
+        self.status_code = 200
+        self.url = url
+
+    def json(self):
+        return {
+            'Meta Data': {
+                "2. Symbol": "AAPL",
+                "3. Last Refreshed": "2020-07-28"
+            },
+            'Weekly Adjusted Time Series': {
+                "2020-07-24": {
+                    "4. close": "379.2400",
+                },
+                "2020-07-17": {
+                    "4. close": "362.7600",
+                },
+                "2020-06-11": {
+                    "4. close": "354.3400",
+                },
+                "2020-02-25": {
+                    "4. close": "432.9800",
+                }
+            }
+        }
+
 
 @pytest.fixture(scope='module')
 def test_client():
@@ -223,3 +236,33 @@ def mock_requests_get_failure(monkeypatch):
 
     url = 'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=MSFT&apikey=demo'
     monkeypatch.setattr(requests, 'get', mock_get)
+
+@pytest.fixture(scope='function')
+def mock_requests_get_success_weekly(monkeypatch):
+    # Create a mock for the requests.get() call to prevent making the actual API call
+    def mock_get(url):
+        return MockSuccessResponseWeekly(url)
+
+    url = 'https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol=MSFT&apikey=demo'
+    monkeypatch.setattr(requests, 'get', mock_get)
+
+# ***register-login-logout 2nd user***
+@pytest.fixture(scope='module')
+def register_second_user(test_client):
+    """Registers the second user using the '/users/register' route."""
+    test_client.post('/users/register',
+    data={'name':'Alice Barroz', 'email': 'alice@yahoo.com',
+    'password': 'FlaskIsTheBest987'})
+
+
+@pytest.fixture(scope='function')
+def log_in_second_user(test_client, register_second_user):
+    # Log in the user
+    test_client.post('/users/login',
+    data={'email': 'alice@yahoo.com',
+    'password': 'FlaskIsTheBest987'})
+
+    yield   # this is where the testing happens!
+
+    # Log out the user
+    test_client.get('/users/logout', follow_redirects=True)

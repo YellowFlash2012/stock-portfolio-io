@@ -31,9 +31,7 @@ def generate_password_reset_email(user_email):
 def about():
     return render_template('users/about.html', company_name='Kozuki-IO')
 
-@users_blueprint.errorhandler(403)
-def page_forbidden(e):
-    return render_template('users/403.html'), 403
+
 
 @users_blueprint.route('/admin')
 def admin():
