@@ -24,6 +24,8 @@ class Config(object):
 
     API_KEY = os.getenv('API_KEY')
 
+    LOG_TO_STDOUT = os.getenv('LOG_TO_STDOUT', default=False)
+
 
 class ProductionConfig(Config):
     FLASK_ENV = 'production'

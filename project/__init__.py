@@ -53,12 +53,18 @@ def register_blueprints(app):
 
 def configure_logging(app):
     # Logging Configuration
-    file_handler = RotatingFileHandler('instance/flask-stock-portfolio.log', maxBytes=16384, backupCount=20)
+    if app.config['LOG_TO_STDOUT']:  # NEW!!!
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        app.logger.addHandler(stream_handler)
 
-    file_formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s [in %(filename)s:%(lineno)d]')
-    file_handler.setFormatter(file_formatter)
-    file_handler.setLevel(logging.INFO)
-    app.logger.addHandler(file_handler)
+    else:
+        file_handler = RotatingFileHandler('instance/flask-stock-portfolio.log', maxBytes=16384, backupCount=20)
+
+        file_formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s [in %(filename)s:%(lineno)d]')
+        file_handler.setFormatter(file_formatter)
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
 
     # Remove the default logger configured by Flask
     app.logger.removeHandler(default_handler)
