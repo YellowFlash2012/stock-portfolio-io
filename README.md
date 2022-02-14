@@ -43,6 +43,6 @@ Gunicorn
 
 8- how to insert chart.js charts into a flask app
 
-9- Deploying on heroku remains an impass for me. Something always goes wrong that I can't fix despite all my research. Will update with live preview link if I manage to deploy in the future.
+9- Deploying python apps on heroku remains an impass for me. Something always goes wrong. This time I have managed to work around all the potholes. I'd prefer things to go seemslessly like with node apps.
 
 ![stock-portfolio-io](/screenshots/stock-detail.png)
